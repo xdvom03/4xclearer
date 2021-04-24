@@ -151,6 +151,13 @@
   (let ((f (widget r c 'ltk:canvas master)))
     f))
 
+(defun canvas (r c master h w)
+  ;; Ugly hack: LTK does not support backround colours of frames, but it works for canvases, and they seem to work serviceably as frames. 
+  (let ((canvas (widget r c 'ltk:canvas master)))
+    (ltk:configure canvas :height h)
+    (ltk:configure canvas :width w)
+    canvas))
+
 (defun window (title)
   (let ((W (make-instance 'ltk:toplevel :title title)))
     W))
@@ -158,3 +165,31 @@
 (defun set-colour (widget colour1 colour2)
   (ltk:configure widget :background colour1)
   (ltk:configure widget :foreground colour2))
+
+(defun circle (canvas center r colour)
+  (let* ((x (car center))
+         (y (cdr center))
+         (circle (ltk:create-oval canvas
+                                  (- x r)
+                                  (- y r)
+                                  (+ x r)
+                                  (+ y r))))
+    (ltk:itemconfigure canvas circle :fill colour)
+    circle))
+
+(defun square (canvas center r colour)
+  (let* ((x (car center))
+         (y (cdr center))
+         (square (ltk:create-rectangle canvas
+                                       (- x r)
+                                       (- y r)
+                                       (+ x r)
+                                       (+ y r))))
+    (ltk:itemconfigure canvas square :fill colour)
+    square))
+
+(defun horizontal-line (canvas y x1 x2)
+  (ltk:create-line canvas (list x1 y x2 y)))
+
+(defun vertical-line (canvas x y1 y2)
+  (ltk:create-line canvas (list x y1 x y2)))

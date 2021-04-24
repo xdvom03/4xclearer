@@ -26,6 +26,8 @@
 (defparameter *secondary-colours* (list "#dd2"
                                         "#d2d"
                                         "#2dd"))
+(defparameter *canvas-h* 500)
+(defparameter *canvas-w* 500)
 (defparameter *h* 10)
 (defparameter *w* 10)
 (defparameter *player-count* 2)
@@ -163,37 +165,31 @@
 ;;;----------------------------------------------------------------------------------------------
 ;;; MAIN
 
-(defun text (i j)
-  (cond ((gethash (cons i j) *cities*)
-         (concat "C" (income (gethash (cons i j) *cities*))))
-        ((gethash (cons i j) *units*)
-         (concat "U" (unit-moves (gethash (cons i j) *units*))))
-        (t "")))
+(let ((canvas-objects (ht))
+      (tiles (ht)))
+  (defun redraw (canvas)
+    (dotimes (i *h*)
+      (dotimes (j *w*)
+        (let ((center (cons (* (+ i 1/2) (/ *canvas-h* *h*))
+                            (* (+ j 1/2) (/ *canvas-w* *w*))))
+              (unit (gethash (cons i j) *units*))
+              (city (gethash (cons i j) *cities*)))
 
-(defun field-hash (h w fun)
-  (let ((acc (ht)))
-    (dotimes (i h)
-      (dotimes (j w)
-        (let ((ii i)
-              (jj j))
-          (setf (gethash (cons i j) acc)
-                (funcall fun ii jj)))))
-    acc))
+          (if (gethash (cons i j) tiles)
+              (ltk:itemconfigure canvas (gethash (cons i j) tiles) :fill (colour i j))
+              (setf (gethash (cons i j) tiles)
+                    (square canvas center (/ *canvas-w* (* 2 *w*)) (colour i j))))
 
-(defun redraw (field)
-  (dotimes (i *h*)
-    (dotimes (j *w*)
-      (let ((button (gethash (cons i j) field))
-            (unit (gethash (cons i j) *units*))
-            (city (gethash (cons i j) *cities*)))
-        (setf (ltk:text button)
-              (text i j))
-        (set-colour button (colour i j)
-                    (if unit
-                        (player-secondary-colour (gethash (unit-player unit) *players*))
-                        (if city
-                            (player-secondary-colour (gethash (city-player city) *players*))
-                            "#000")))))))
+          (when (gethash (cons i j) canvas-objects)
+            (ltk:itemdelete canvas (gethash (cons i j) canvas-objects))
+            (remhash (cons i j) canvas-objects))
+        
+          (cond (city ;; TBD: Tohle gethash u player musí pryč
+                 (setf (gethash (cons i j) canvas-objects)
+                       (circle canvas center 10 (player-secondary-colour (gethash (city-player city) *players*)))))
+                (unit
+                 (setf (gethash (cons i j) canvas-objects)
+                       (square canvas center 10 (player-secondary-colour (gethash (unit-player unit) *players*)))))))))))
 
 (defun run ()
   (found-city 0 0 0)
@@ -203,14 +199,7 @@
   (ltk:with-ltk ()
     (ltk:withdraw ltk:*tk*)
     (letrec ((W (window "civ"))
-             (field-frame (frame 0 0 W))
-             (field (field-hash *h* *w* #'(lambda (i j) (button i j field-frame (text i j) #'(lambda ()
-                                                                                               (action i j)
-                                                                                               (redraw field)
-                                                                                               (setf (ltk:text money)
-                                                                                                     (money-info))
-                                                                                               (setf (ltk:text turn)
-                                                                                                     *turn*))))))
+             (field (canvas 0 0 W *canvas-h* *canvas-w*))
              (money (label 2 0 W (money-info)))
              (turn (label 3 0 W *turn*))
              (autoplay (button 1 1 W "Play for me" #'(lambda ()
@@ -232,6 +221,11 @@
                                                             *turn*)
                                                       (set-colour turn (player-primary-colour (gethash *turn* *players*))
                                                                   (player-secondary-colour (gethash *turn* *players*)))))))
+      (ltk:bind field "<Button-1>" #'(lambda (event)
+                                       (action (floor (* *w* (/ (ltk:event-x event) *canvas-w*)))
+                                               (floor (* *h* (/ (ltk:event-y event) *canvas-h*))))
+                                       (redraw field)))
+      
       (ltk:on-close W #'(lambda () (ltk:destroy ltk:*tk*)))
       (setf (ltk:text money)
             (money-info))
@@ -247,12 +241,21 @@
       (field-colour i j)
       *basic-colour*))
 
+(defun buy-unit (i j player)
+  (decf (player-money (gethash player *players*))
+        *unit-cost*)
+  (setf (gethash (cons i j) *units*)
+        (make-unit :x-pos i :y-pos j :player *turn* :moves 0)))
+
+;;; MAIN
+;;;----------------------------------------------------------------------------------------------
+;;; MOVE ATTEMPTS (VALID ACTIONS)
+
 (defun action (i j)
   (let ((city (gethash (cons i j) *cities*))
         (unit (gethash (cons i j) *units*)))
     (cond (city
            (print city))
-        
           (unit
            (if (and (> (unit-moves unit) 0)
                     (equal *turn* (unit-player unit)))
@@ -264,7 +267,7 @@
                  (if (not (some #'(lambda (num) (near-a-city? i j num))
                                 (countdown *player-count*)))
                      (button 1 1 W "o" #'(lambda () (ltk:destroy W) (found-city i j *turn*)))))))
-        
+          
           ((and (near-a-city? i j *turn*)
                 (equal *turn*
                        (city-player (nearest-city i j))))
@@ -275,9 +278,3 @@
                  (button 1 0 W "Buy unit" #'(lambda ()
                                               (buy-unit i j *turn*)
                                               (ltk:destroy W)))))))))
-
-(defun buy-unit (i j player)
-  (decf (player-money (gethash player *players*))
-        *unit-cost*)
-  (setf (gethash (cons i j) *units*)
-        (make-unit :x-pos i :y-pos j :player *turn* :moves 0)))
