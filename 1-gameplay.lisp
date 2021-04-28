@@ -1,3 +1,7 @@
+#|
+There are a lot of checks here that only arise when an AI calls (for example) found-city. The intent is to avoid an accidental cheating AI.
+|#
+
 (defstruct city
   (x 0)
   (y 0)
@@ -145,6 +149,7 @@
     (when (and (> *h* (+ x dx) -1)
                (> *w* (+ y dy) -1)
                unit
+               (equal (unit-player unit) player)
                (> (unit-moves unit) 0))
       (if target-unit
           (if (not (equal (unit-player target-unit) player))
@@ -163,6 +168,15 @@
         (make-city :x x :y y :player player))
   (found-city-graphics (cons x y) player)
   (redraw))
+
+(defun found-city-attempt (x y player)
+  (let ((unit (gethash (cons x y) *units*)))
+    (when (and unit
+               (equal (unit-player unit) player)
+               (> (unit-moves unit) 0)
+               (not (some #'(lambda (num) (near-a-city? x y num))
+                          (countdown *player-count*))))
+      (found-city x y player))))
 
 (defun next-turn ()
   (all-cities *turn* #'(lambda (city)
@@ -292,6 +306,12 @@
       (field-colour x y)
       *basic-colour*))
 
+(defun create-unit (x y player)
+  (setf (gethash (cons x y) *units*)
+        (make-unit :x x :y y :player player :moves 0))
+  (print (concat "Buying at (" x ", " y ")."))
+  (buy-graphics (cons x y) player))
+
 (defun buy-unit (x y player)
   (when (and (>= (player-money (gethash player *players*))
                  *unit-cost*)
@@ -302,10 +322,7 @@
                     (city-player (nearest-city x y))))
     (decf (player-money (gethash player *players*))
           *unit-cost*)
-    (setf (gethash (cons x y) *units*)
-          (make-unit :x x :y y :player player :moves 0))
-    (print (concat "Buying at (" x ", " y ")."))
-    (buy-graphics (cons x y) player)))
+    (create-unit x y player)))
 
 ;;; MAIN
 ;;;----------------------------------------------------------------------------------------------
