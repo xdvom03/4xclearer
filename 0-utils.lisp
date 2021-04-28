@@ -11,6 +11,19 @@
 (defun ht ()
   (make-hash-table :test #'equal))
 
+(defun move-hash (hash-table original-key new-key)
+  ;; destructive (which is the point)
+  ;; hash tables have limited test options, all of which are commutative, so we need not worry about the order here
+  (multiple-value-bind (value exists?)
+      (gethash original-key hash-table)
+    (if (and exists?
+             (not (funcall (hash-table-test hash-table) original-key new-key)))
+        (progn
+          (setf (gethash new-key hash-table)
+                value)
+          (remhash original-key hash-table)
+          hash-table))))
+
 (defmacro letrec (bindings &body decls/forms)
   (assert (and (listp bindings)
                (every #'(lambda (b)
@@ -193,3 +206,31 @@
 
 (defun vertical-line (canvas x y1 y2)
   (ltk:create-line canvas (list x y1 x y2)))
+
+(defun brighten (colour)
+  ;; expects three-digit RGBs
+  ;; TBD: Horrifying hack!
+  (let ((old-base *read-base*))
+    (setf *read-base* 16)
+    (let* ((avg-col (floor (sqrt (/ (+ (sq (read-from-string (subseq colour 1 2)))
+                                       (sq (read-from-string (subseq colour 2 3)))
+                                       (sq (read-from-string (subseq colour 3))))
+                                    9))))
+           (acc (concat "#" (write-to-string (+ (read-from-string (subseq colour 1))
+                                                (read-from-string (concat (write-to-string (min (1+ avg-col) (- 15 (read-from-string (subseq colour 1 2)))))
+                                                                          (write-to-string (min (1+ avg-col) (- 15 (read-from-string (subseq colour 2 3)))))
+                                                                          (write-to-string (min (1+ avg-col) (- 15 (read-from-string (subseq colour 3))))))))
+                                             :base 16))))
+      (setf *read-base* old-base)
+      acc)))
+
+(defun add-coords (c1 c2)
+  (cons (+ (car c1)
+           (car c2))
+        (+ (cdr c1)
+           (cdr c2))))
+
+(defun chance (odds)
+  (< (random (expt 10 6))
+     (* (expt 10 6)
+        odds)))
