@@ -231,6 +231,15 @@
            (cdr c2))))
 
 (defun chance (odds)
-  (< (random (expt 10 6))
-     (* (expt 10 6)
+  (< (random (expt 10 8))
+     (* (expt 10 8)
         odds)))
+
+(defmacro fallback (obj if-nil)
+  "Identity unless obj is NIL. In that case, returns if-nil."
+  ;; avoiding multiple evaluation
+  (let ((name (gensym)))
+    `(let ((,name ,obj))
+       (if ,name
+           ,name
+           ,if-nil))))

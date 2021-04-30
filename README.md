@@ -17,7 +17,7 @@ Obviously, this precludes some tactics common in 4X - exploration, surprise atta
 
 ### Rules
 
-* The board is a square of square tiles. Leaving the map is impossible, cities next to the map bordees are disadvantaged.
+* The board is a square of square tiles. Leaving the map is impossible, cities next to the map borders are disadvantaged.
 * Cities control tiles around them within some radius (starting at 1, increasing by 1/40 per turn).
 * Within these tiles, the player can buy a unit for 24 money. Units are bought moveless. 
 * Each city produces an income of 1, plus you get an income of 1 for every tile you control.
@@ -48,3 +48,34 @@ Pathfinding will get easier with solving city transport, but units still lack a 
 ### Code quality
 
 Structures should be generalised to objects. Actions should be provided in a more logical interface, perhaps through packages, so that the AI would only send in move attempts (and thus couldn't break the rules).
+
+## V2
+
+### Rules
+
+* Income is now only tied to tile count. 
+* Tiles belong to the player with most cities nearby, or nobody if there is a tie.
+* Cities do not grow (but the feature hasn't been cut from the code entirely yet).
+* Moving to a friendly city is an attempt to move two steps in that direction (through the city). This can be used to attack.
+
+### Resulting gameplay
+
+City defense is much easier, as is city regaining. Poorly placed cities are less valuable. Torus idea still interesting.
+
+Bug: Now that tiles can get tied, it is possible to get many cities next to each other, and the move system doesn't work with it properly (jumping 4 tiles with 2 cities).
+
+Graphics: Movement would be better without a pop-up window. Same for buying units. Also need a win/lose screen.
+
+### AI
+
+I solved the problem of pathfinding: the AI picks targets and moves towards them. When reaching the target, the unit will found a city, unless there is an enemy unit nearby, in which case it will kill it. This has the advantage of using most units in a meaningful way. With the current system, the AI crushes me with a 2-to-1 city starting advantage, but I crush it on 1-to-1.
+
+Troubles with targets:
+
+* Targets are not reconsidered unless rendered invalid, so the unit can miss big opportunities on its way to a target that has since become almost worthless.
+* We first find buy location and then the target, but the other way around makes more sense (and is closer to how I think when playing). Once you pick a target, we should only pick tiles by their relation to that tile, but we just pick tiles good overall, then try to find something.
+* Pathfinding can get stuck if there are a lot of units on at the same time. Pathfinding can overshoot one direction through a city and thus keep going back and forth.
+
+### Overall quality
+
+Visuals are much more pleasant and useful. I took a non-textual approach on the board and like it so far, but need to integrate everything to it. Code quality isn't too good, most things are misplaced.
