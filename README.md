@@ -68,13 +68,15 @@ Graphics: Movement would be better without a pop-up window. Same for buying unit
 
 ### AI
 
-I solved the problem of pathfinding: the AI picks targets and moves towards them. When reaching the target, the unit will found a city, unless there is an enemy unit nearby, in which case it will kill it. This has the advantage of using most units in a meaningful way. With the current system, the AI crushes me with a 2-to-1 city starting advantage, but I crush it on 1-to-1.
+I solved the problem of pathfinding: the AI picks targets and moves towards them. When reaching the target, the unit will found a city, unless there is an enemy unit nearby, in which case it will kill it. This has the advantage of using most units in a meaningful way. With the current system, the AI crushes me with a 2-to-1 city starting advantage, but I crush it on 1-to-1. On a bigger board, though, the AI's poor city planning loses it a lot of its advantage.
 
 Troubles with targets:
 
 * Targets are not reconsidered unless rendered invalid, so the unit can miss big opportunities on its way to a target that has since become almost worthless.
-* We first find buy location and then the target, but the other way around makes more sense (and is closer to how I think when playing). Once you pick a target, we should only pick tiles by their relation to that tile, but we just pick tiles good overall, then try to find something.
-* Pathfinding can get stuck if there are a lot of units on at the same time. Pathfinding can overshoot one direction through a city and thus keep going back and forth.
+* We first find buy location and then the target, but the other way around makes more sense (and is closer to how I think when playing). Once you pick a target, we should only pick tiles by their relation to that tile, but we just pick tiles good overall, then try to find something. This is also extra slow. Targets' distance would be a bit harder to calculate, esp. if it is to take blocking units into account.
+* Pathfinding can get stuck if there are a lot of units on at the same time. Units don't consider other units in their movement, sometimes cutting each other off unnecessarily. Units with a straight target line should get priority.
+* Pathfinding can overshoot one direction through a city and thus keep going back and forth.
+* Capturing opponent cities gets too low a valuation.
 
 ### Overall quality
 
